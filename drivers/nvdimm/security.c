@@ -73,11 +73,17 @@ static struct key *nvdimm_request_key(struct nvdimm *nvdimm)
 {
 	struct key *key = NULL;
 	char desc[NVDIMM_KEY_DESC_LEN + sizeof(NVDIMM_PREFIX)];
+	struct device *dev = &nvdimm->dev;
 
 	sprintf(desc, "%s%s", NVDIMM_PREFIX, nvdimm->dimm_id);
 	key = request_key(&key_type_logon, desc, "");
-	if (IS_ERR(key))
+	if (IS_ERR(key)) {
+		if (PTR_ERR(key) == -ENOKEY)
+			dev_warn(dev, "request_key() found no key\n");
+		else
+			dev_warn(dev, "request_key() upcall failed\n");
 		key = NULL;
+	}
 
 	return key;
 }
